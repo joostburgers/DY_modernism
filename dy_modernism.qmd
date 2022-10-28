@@ -12,7 +12,6 @@ format:
     height: 1050
 ---
 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, cache.lazy = FALSE)
 
@@ -85,6 +84,7 @@ library(tidyverse)
 library(plotly)
 library(cooccur)
 library(stats)
+library(snakecase)
 ```
 
 ```{r load_data}
@@ -126,9 +126,8 @@ event_location_types <- event_locations %>%
 location_export <- location_type %>% 
                     distinct(Type)
 
-write_csv(location_export, "location_export.csv")
+#write_csv(location_export, "location_export.csv")
 ```
-
 
 # Navigation
 
@@ -136,18 +135,35 @@ This entire slide deck is available here:
 
 https://bit.ly/digyok
 
-<p align = "left"><img src="images/bitly_digyok.png" alt="QR code" height="500px"><a href="https://bit.ly/digyok"></a><br>
+<p align = "left">
+
+<img src="images/bitly_digyok.png" alt="QR code" height="500px"/><a href="https://bit.ly/digyok"></a><br>
 
 -   You can use the arrow keys to navigate (←) left and right (→) between sections
 -   Press ESC to see all the slides
 
 # Overview
 
--   Apologize
--   Digital Yoknapatawpha
+-   Problems: Longevity Interoperability
+-   Solutions: DY data model
+-   Examples
 -   Modernism
--   Relationship Advice
 
+# DH Problems
+
+-   Longevity: compared to print publications DH projects have an incredibly short life-cycle. They quickly become obsolete.
+
+-   Interoperability: Despite various attempts, DH projects generally are not able to "talk to each other."
+
+#DY Solutions
+
+-   The underlying data model used by DY offers a robust, scalable solution that has been tested and refined for nearly a decade
+
+-   It is author agnostic and can be modified to meet the needs of any author.
+
+# Why Care?
+
+-   Interoperability is a means of ensuring project longevity.
 
 # Digital Yoknapatawpha: A Miniature of Man's Hopes and Disasters
 
@@ -157,31 +173,99 @@ https://bit.ly/digyok
 -   I still catch data encoding mistakes
 -   ...that I made
 -   Sorry!
--   I'm doubly sorry for the next thing...
--   there will be some math.
+-   Humanities Data Science is an imperfect science
 
 # Small Town / Big Data
 
 The goal of the project was to be as comprehensive as possible.
 
 -   5011 Characters
+
 -   2176 Locations
+
 -   8520 Events
 
-- This is not as large as "big data", but it far exceeds the capacity of a single person to apprehend.
-- This data can be used to complement, disrupt, irritate, and otherwise make us reconsider our assumptions about Faulkner and modernism more generally.
+-   This is not as large as "big data", but it far exceeds the capacity of a single person to apprehend.
+
+-   This data can be used to complement, disrupt, irritate, and otherwise make us reconsider our assumptions about Faulkner and modernism more generally.
 
 # Relationships
 
-- These data exist relationally.
+-   These data exist relationally
+
+-   Characters appear at events (time), which happen at locations (space)
+
+-   This represents a fundamental structure in narrative.
+
+-   Using this structure we can do very sophisticated analyses of interactions between characters at different places over time.
+
+# Lighting example: Plot Structure
+
+-   What makes Faulkner's plot structure unique?
+
+# Difficulty and Faulkner
+
+-   Some stories were for a popular audience and some for a "high-brow" audience.
+
+```{r}
+
+narrative_data <- dy_events %>% 
+              select(c(SourceTextTitle:NarrativeStatus)) %>% 
+  group_by(SourceTextTitle) %>% 
+              rename_with(~ to_any_case(.x, "snake")) %>%  
+              arrange(chronological_order, .by_group = TRUE) %>% distinct(chronological_order, .keep_all = TRUE) %>% 
+              mutate(chronology = row_number())
+              
+
+```
+
+```{r}
+narrative_fluctuation <- narrative_data %>%
+  group_by(source_text_title) %>%
+  arrange(order_within_page, .by_group = TRUE)  %>%
+  mutate(fluctuation = ifelse(chronology - lag(chronology, default = 0) !=
+                                1, 1, 0)) %>%
+  
+  mutate(status_fluctuation = if_else(
+    narrative_status != lag(narrative_status, default = NA),
+    1,
+    0
+  )) %>% 
+  
+  mutate(total_fluctuation = fluctuation+ifelse(is.na(status_fluctuation),0,status_fluctuation)) 
+```
+
+```{r}
+fluctuation_total <-  narrative_fluctuation %>% 
+                  summarise(flux = sum(total_fluctuation)/n()) %>% 
+  mutate(canonical = ifelse (str_detect(source_text_title,"Sound|Light|Dying|Absalom"), "Canonical", "Non-Canonical")) 
+  
+```
+
+```{r}
+fluctuation_total_plot <- plot_ly(
+  fluctuation_total,
+  x = ~ reorder(source_text_title, flux),
+  y = ~ flux,
+  name = ~ canonical,
+  type = "bar",
+  opacity = .9,
+  colors = faulkner_colorway[1],
+  hovertemplate = paste('Title: %{x}<extra></extra>')
+) 
+
+fluctuation_total_plot <- fluctuation_total_plot %>%   layout(
+  yaxis = list(title = "Fluctuations per Event"),
+    xaxis = list(title = "Text Title"),
+    title = list(text = "Narrative Fluctuation across Faulkner (n = 68)")
+    
+  )
+  
+fluctuation_total_plot
+```
 
 
-# Why do characters exist?
 
-<p class = "fragment">
-"How are [a character’s] appearances positioned in relation to other characters and to the thematic and structural totality of the narrative? </p>
-
-<p class = "fragment citation"> Woloch, Alex. *The One Vs. The Many: Minor Characters and the Space of the Protagonist in the Novel.* Princeton University Press, 2009.</p>
 
 ```{r all_character_data}
 all_characters <- dy_events %>% 
@@ -191,76 +275,207 @@ all_characters <- dy_events %>%
                   distinct(CharacterName, .keep_all = TRUE)
 ```
 
-```{r eco_system_map}
-# image_file <- "https://raw.githubusercontent.com/joostburgers/absalom_sentiment_analysis/master/images/dy_base_layer_4_2.png"
-# 
-# fig_char_map <-
-#   plot_ly(
-#     all_characters,
-#     x = ~ X,
-#     y = ~ Y,
-#     name = "Characters",
-#     #  colors = faulkner_colorway,
-#     type = 'scatter',
-#     mode = 'markers',
-#      hoverinfo='text',
-#     text= ~paste('Name:', CharacterName,'<br>Race: ',Race, '<br>Gender: ', Gender, '<br>Class: ', Class),
-#      marker = list(
-#         sizemode='diameter',
-#         size = 6, 
-#                   opacity = .4,
-#                   line = list(width = 1, color = 'white')
-#           ),
-#     width = 900,
-#      height = 705
-#    
-#   )
-# fig_char_map <- fig_char_map %>%
-#   layout(
-#     title = "All Characters",
-#     xaxis = list(
-#       title = "",
-#       visible = FALSE,
-#       fixedrange = TRUE,
-#       range = c(0, 2008)
-#     ),
-#     yaxis = list(
-#       title = "",
-#       visible = FALSE,
-#       fixedrange = TRUE,
-#       range = c(-1660, 0)
-#     ),
-#     margin = m,
-#     font = plot_font,
-#     legend = list(
-#       title = list(text = "<b>Legend</b>"),
-#       itemsizing = 'constant'
-#     ),
-#     autosize = F,
-#       paper_bgcolor = faulkner_paperbackground,
-#     plot_bgcolor = faulkner_plotcolor,
-#     modebar = list(bgcolor = faulkner_paperbackground),
-#     images = list(
-#       list(
-#         source =  image_file,
-#         xref = "x",
-#         yref = "y",
-#         x = 0,
-#         y = -40,
-#         sizex = 2008,
-#         sizey = 1660,
-#          sizing = "stretch",
-#         opacity = 0.8,
-#         layer = "below"
-#       )
-#       )
-#   )
 
-#tags$div(fig_char_map, class = "map_container r-stretch", align = "center")
-#tags$caption(HTML("<i>Figure 2:</i> Map of each character."), style =fig_caption)
+# Extending beyond DY: Faulkner and the Market Place
+
+- Faulkner wrote for multiple audiences
+- Sometimes he was trying to sell stories
+- Is there a relationship between complexity and saleability?
+
+```{r}
+
+publication_data <- read_csv("Publication chart with circulation.csv")
+
 ```
 
-# Racial Distribution
+```{r}
+publication_data_clean <- publication_data %>% 
+                          mutate(source_text_title = dQuote(Title, q = FALSE)) %>% 
+                          select(Date, Magazine,Circulation, source_text_title) %>% 
+  drop_na(Circulation)
+```
+
+
+```{r}
+circulation_fluctuation <- fluctuation_total %>% 
+                            inner_join(publication_data_clean)
+```
+
+
+```{r}
+circulation_plot <- circulation_fluctuation %>% 
+                  plot_ly(
+                    x = ~Circulation,
+                    y= ~flux,
+                    name = ~Magazine
+                  )
+
+circulation_plot
+```
+
+
+```{r}
+circulation_time <- circulation_fluctuation %>% 
+                    plot_ly(
+                    x = ~Date,
+                    y= ~flux,
+                    name = ~Magazine,
+                    size= ~Circulation,
+                    type='scatter',
+                    mode = 'markers',
+                  hoverinfo = 'text',
+                    text = ~ paste('Text:', source_text_title, '<br> Circulation: ',Circulation ),
+    marker = list(
+      sizemode = 'diameter',
+      sizeref = 1.5,
+      opacity = .7,
+      line = list(width = 1, color = 'white')
+    )) %>% 
+  layout(
+    title = "Date of Publication and Narrative Fluctuation (n = 25)",
+    xaxis = list(title = "Date"),
+    yaxis = list(title = "Average Fluctuation per Event"),
+    colorway = faulkner_colorway,
+    font = plot_font,
+    margin = m_large,
+    paper_bgcolor = faulkner_paperbackground,
+    plot_bgcolor = faulkner_plotcolor,
+     modebar = list(bgcolor= faulkner_paperbackground)
+     
+  )
+                      
+circulation_time
+
+
+```
+
+# Great, but...
+
+- Can you do this with literally any other author than Faulkner?
+
+
+# Yes, sort...
+
+- South Asian Partition Fiction Database
+
+- 27 Stories
+
+- 1026 Events
+
+- 315 Locations
+
+- 536 Characters
+
+# Narrative Complexity and Partition
+
+- Very hetergenous corpus of "experimental" and linear narrative.
+
+- Canonical works by Saadat Hassan Manto, Intizar Husain, and Mohinder Singh Sarna
+
+
+
+```{r}
+partition_db <- read_csv("data/partition_db_geo.csv")
+```
+
+
+```{r}
+partition_chrono <- partition_db %>% 
+                    distinct(event_id, .keep_all = TRUE) %>% 
+                   select(event_id:chronology, title_of_chapter: gender_author)  %>% 
+                    mutate(order_within_page = start_page_event + (page_event_number/100) ) %>% 
+                  group_by(title_of_chapter) %>% 
+                  arrange(chronology, .by_group = TRUE) %>% 
+                    mutate(chrono_order = row_number()) %>% 
+                    arrange(order_within_page, .by_group = TRUE) 
+```
+
+# Narrative Complexity Chart
+
+```{r}
+partition_fluctuation <- partition_chrono %>% 
+                         group_by(title_of_chapter) %>%
+  arrange(order_within_page, .by_group = TRUE)  %>%
+  mutate(fluctuation = ifelse(chrono_order - lag(chrono_order, default = 0) !=
+                                1, 1, 0)) %>%
+  
+  mutate(status_fluctuation = if_else(
+    narrative_status != lag(narrative_status, default = NA),
+    1,
+    0
+  )) %>% 
+  
+  mutate(total_fluctuation = fluctuation+ifelse(is.na(status_fluctuation),0,status_fluctuation)) 
+
+
+```
+
+```{r}
+partition_fluctuation_total <-  partition_fluctuation %>%
+  summarise(gender = gender_author, last_name = family_name_author, first_name = given_name_s, flux = sum(total_fluctuation) /
+              n()) %>% 
+  
+      distinct(title_of_chapter, .keep_all = TRUE) %>% 
+        mutate(gender = ifelse(title_of_chapter=="Lajwanti","Male", gender))
+```
+
+```{r}
+partition_total_plot <- plot_ly(
+  partition_fluctuation_total,
+  x = ~ reorder(title_of_chapter, flux),
+  y = ~ flux,
+  name = ~ gender,
+  type = "bar",
+  opacity = .9,
+  colors = faulkner_colorway[1],
+  hoverinfo = 'text',
+  text = ~ paste('Text: ', title_of_chapter, '<br> Author: ',last_name, ", ",first_name, sep="" ),
+  textposition = 'none'
+) 
+
+partition_total_plot <- partition_total_plot %>%   layout(
+  yaxis = list(title = "Fluctuations per Event"),
+    xaxis = list(title = "Text Title"),
+    title = list(text = "Narrative Fluctuation across Partition Texts (n = 28)")
+    
+  )
+  
+partition_total_plot
+
+
+```
+
+
+```{r}
+all_fluctuations <- fluctuation_total %>%
+  select(source_text_title, flux) %>%
+  filter(str_detect(source_text_title, "\"")) %>%
+  mutate(gender = "Faulkner",
+         last_name = "Faulkner",
+         first_name = "William") %>%
+  rename(title_of_chapter = source_text_title) %>% 
+  relocate(flux, .after = last_col()) %>% 
+  add_row(partition_fluctuation_total)
+        
+  
+
+
+
+
+```
+
+
+```{r}
+box_plots <- all_fluctuations %>% 
+          plot_ly(y = ~flux, 
+                  type = "box", 
+                  color = ~gender,
+                  quartilemethod="linear")
+
+box_plots
+```
+
+# Distribution of Types of Characters
 
 Characters can be grouped together by a common attribute to determine the distribution in the population.
 
@@ -304,9 +519,13 @@ plot_demography <- plot_demography %>% layout(
 tags$div(plot_demography, class = "map_container fragment", align = "center")
 ```
 
-<p class = "fragment">But this is misleading, because not all characters appear equally...</p>
+<p class="fragment">
 
-# {data-transition="zoom"}  
+But this is misleading, because not all characters appear equally...
+
+</p>
+
+#  {data-transition="zoom"}
 
 ```{r}
 plot_demography_large <- plot_demography %>% 
@@ -318,7 +537,7 @@ tags$div(plot_demography_large, class = "map_container", align = "center")
 
 ```
 
-# Character Representation
+# How Often Characters Appear
 
 The number of times characters occur in events is a proxy for appearances.
 
@@ -439,16 +658,16 @@ demography_sunburst <- demography_sunburst %>%
 ```
 
 # Sunburst
+
 ```{r}
 tags$div(demography_sunburst, class = "map_container fragment", align = "center")
 ```
 
+# Characters Interactions
 
+-   Determining how characters interact requires knowing more details about them
+-   Character attributes (Race, Gender) can be strung together to create "types" (i.e. White Male, Black Female, etc.)
 
-# Characters as Types
-
-- Determining how characters interact requires knowing more details about them
-- Character attributes (Race, Gender) can be strung together to create "types" (i.e. White Male, Black Female, etc.)
 ```{r race_gender_co_occurrence}
 race_gender_matrix <- dy_events %>%
   filter(PresentMentioned == "Present") %>%
@@ -514,40 +733,37 @@ race_gender_matrix_plot <- race_gender_matrix_plot %>%
 
 ```
 
-# {data-transition="zoom"}  
+#  {data-transition="zoom"}
 
 ```{r}
 tags$div(race_gender_matrix_plot, class = "map_container", align = "center")
 ```
 
-
-
 # Birds of a feather...
 
-* In statistical ecology, co-occurrence analysis is the process of determining the rules of assembly.
-  + If there is a **positive** co-occurrence then one bird appears with another.
-  + If there is a **negative** co-occurrence then one bird does not appear when another is present.
-  + Co-occurrence can also be **random**, where a bird may appear sometimes and at other times not.
+-   In statistical ecology, co-occurrence analysis is the process of determining the rules of assembly.
+    -   If there is a **positive** co-occurrence then one bird appears with another.
+    -   If there is a **negative** co-occurrence then one bird does not appear when another is present.
+    -   Co-occurrence can also be **random**, where a bird may appear sometimes and at other times not.
 
-# ...do math!{data-background-transition="none"}
+# ...do math! {data-background-transition="none"}
 
 ::: nonincremental
+-   Probabilistic statistics $$
+      P_j = \frac{\binom{N_1}{j}\times\binom{N-N_1}{N_2-j}}{\binom{N}{N_2}}
+      $$
+    -   All the different combinations of "species 1" at all sites $\binom{N_1}{j}$
+    -   Multiply the different combinations possible with "species 2" without "species 1"$\binom{N-N_1}{N_2-j}$
+    -   Divide by the total number of sites where "species 2" could have occurred. $\binom{N}{N_2}$
 
-* Probabilistic statistics
-   $$
-    P_j = \frac{\binom{N_1}{j}\times\binom{N-N_1}{N_2-j}}{\binom{N}{N_2}}
-    $$
-  + All the different combinations of "species 1" at all sites $\binom{N_1}{j}$
-  + Multiply the different combinations possible with "species 2" without "species 1"$\binom{N-N_1}{N_2-j}$
-  + Divide by the total number of sites where "species 2" could have occurred. $\binom{N}{N_2}$
-
-<div class= "citation">Veech, Joseph. "cooccur: Probabilistic Species Co-Occurrence Analysis in R." *Journal of Statistical Software*. vol. 69. 2/2016</div>
+::: citation
+Veech, Joseph. "cooccur: Probabilistic Species Co-Occurrence Analysis in R." *Journal of Statistical Software*. vol. 69. 2/2016
+:::
 :::
 
 # Social Relations and Segregation
 
-- Types tend to reproduce the social relationships of the Planter Aristocracy and Jim Crow
-
+-   Types tend to reproduce the social relationships of the Planter Aristocracy and Jim Crow
 
 ```{r co_occurrence_matrix, eval = FALSE, cache = TRUE}
 co_occurrence_matrix <- dy_events %>% 
@@ -588,7 +804,6 @@ race_class_gender_cooccur <-
 
 
 ```
-
 
 ```{r get_cooccur_table}
 
@@ -660,7 +875,7 @@ top_table_plot <- top_table_plot %>%
 
 ```
 
-# {data-transition="zoom"}  
+#  {data-transition="zoom"}
 
 ```{r}
 tags$div(top_table_plot, class = "map_container", align = "center")
@@ -672,7 +887,11 @@ Characters do not merely interact, they do so in particular contexts.
 
 There are **31** character types that combine in **528** different ways across **14** different types of locations. Figuring out these relationships becomes very complicated.
 
-<h1 class = "fragment"> Data science to the rescue!</h1>
+<h1 class="fragment">
+
+Data science to the rescue!
+
+</h1>
 
 # Principal Component Analysis
 
@@ -682,8 +901,9 @@ It calculates which components account for the most variance in the data.
 
 One common application is in genetics research, where cancer cells might have thirty different properties. No one individual property makes it malignant, but some combinations are worse than others.
 
-<p align = "left"><img src="images/cancerPCA.png" alt="QR code" height="500px"><a href="https://bit.ly/digyok"></a><br>
+<p align = "left">
 
+<img src="images/cancerPCA.png" alt="QR code" height="500px"/><a href="https://bit.ly/digyok"></a><br>
 
 ```{r}
 co_occurrence_locations <- dy_events %>%
@@ -730,6 +950,7 @@ co_occurrence_types <- co_occurrence_locations %>%
               values_fill = 0) %>%
   select(-"NA")
 ```
+
 ```{r interaction_tags}
 interaction_tags <- tagged_prob_table %>% 
                     select(relationship, intersection)
@@ -830,12 +1051,9 @@ tags$div(plot_pca, class = "map_container", align = "center")
 
 ```
 
-
-
-
 # Mapping Character Interaction
 
-- The basic insight from the PCA can be mapped back into the DY map in a more simplified form.
+-   The basic insight from the PCA can be mapped back into the DY map in a more simplified form.
 
 ```{r co_occurrence_simplified}
 co_occurrence_simplified <- dy_events %>%
@@ -929,7 +1147,6 @@ co_occurence_race_groups <- co_occurrence_xy %>%
   arrange(difference, desc(n), .group_by = TRUE)
 ```
 
-
 ```{r map_groups, cache=TRUE}
 image_file <-
   "https://raw.githubusercontent.com/joostburgers/absalom_sentiment_analysis/master/images/dy_base_layer_4_2.png"
@@ -1005,29 +1222,24 @@ fig_cooccur_map_groups <- fig_cooccur_map_groups %>% animation_opts(1000, easing
 
 ```
 
-# {data-transition="zoom"}
-
+#  {data-transition="zoom"}
 
 ```{r}
 tags$div(fig_cooccur_map_groups, class = "map_container", align = "center")
 ```
 
-
-
 # Implications
 
-- Faulkner reproduces the logic of Jim Crow, but does this represent the limits of his imagination or the beginning of the plot?
+-   Faulkner reproduces the logic of Jim Crow, but does this represent the limits of his imagination or the beginning of the plot?
 
-- What is the function of "background" characters? Do they "exist" or are they really just part of the setting?
-
+-   What is the function of "background" characters? Do they "exist" or are they really just part of the setting?
 
 # Thank you for your patience!
 
 Follow us!
 
-<p align = "left"><img src="images/twitter.png" alt="twitter" height="42px"><a href="https://twitter.com/DigYok">\@DigYok</a><br>
-<img src="images/instagram.png" alt="instagram" height="42px"> <a href="https://www.instagram.com/digyok/">digyok</a><br>
-<img src="images/facebook.png" alt="facebook" height="42px"> <a href="https://www.facebook.com/digyok">Digital Yoknapatawpha</a><br>
-<img src="images/internet.png" alt="internet" height="42px"> <a href="http://faulkner.iath.virginia.edu/">http://faulkner.iath.virginia.edu</a><br>
-<img src="images/animated-email.gif" alt="internet" height="42px"> <a href="mailto:johannes.burgers@ashoka.edu.in">Johannes.Burgers@ashoka.edu.in</a><br>
+<p align="left">
+
+<img src="images/twitter.png" alt="twitter" height="42px"/><a href="https://twitter.com/DigYok">\@DigYok</a><br> <img src="images/instagram.png" alt="instagram" height="42px"/> <a href="https://www.instagram.com/digyok/">digyok</a><br> <img src="images/facebook.png" alt="facebook" height="42px"/> <a href="https://www.facebook.com/digyok">Digital Yoknapatawpha</a><br> <img src="images/internet.png" alt="internet" height="42px"/> <a href="http://faulkner.iath.virginia.edu/">http://faulkner.iath.virginia.edu</a><br> <img src="images/animated-email.gif" alt="internet" height="42px"/> <a href="mailto:johannes.burgers@ashoka.edu.in">Johannes.Burgers\@ashoka.edu.in</a><br>
+
 </p>
