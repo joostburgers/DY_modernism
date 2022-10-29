@@ -1,6 +1,6 @@
 ---
-title: "Digital Yoknapatawpha and Modernism"
-subtitle: "Characters, Locations and Events in Digital Yoknapatawpha"
+title: "Digital Yoknapatawpha and Modernism:"
+subtitle: "Rethinking Computational Scholarship for the next decade"
 author: "Johannes Burgers"
 editor: visual
 date: "10/30/2022"
@@ -8,8 +8,6 @@ format:
   revealjs: 
     theme: simple
     incremental: true
-    #width: 1680
-    #height: 1050
 ---
 
 ```{r setup, include=FALSE}
