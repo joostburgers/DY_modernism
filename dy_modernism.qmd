@@ -163,17 +163,6 @@ This entire slide deck is available here:
 
 - Data that can be recycled and re-purposed for other projects has a longer live cycle than data that is unique to a specific project
 
-
-# Digital Yoknapatawpha: A Miniature of Man's Hopes and Disasters {.smaller}
-
--   There is no 'objective' way to turn literature into data
--   Years of vetting and peer-review have made the data consistent
--   Each piece of data creates new insights, but also raises more problems
--   I still catch data encoding mistakes
--   ...that I made
--   Sorry!
--   Humanities Data Science is an imperfect science
-
 # Small Town / Big Data
 
 - Project Overview: The ***Digital Yoknapatawpha*** Project is a "deep" atlas of William Faulkner's Yoknapatawpha fictions projected onto digital versions of his own maps. On its most basic level, it allows users to identify every character, place, and event in his works.
@@ -188,7 +177,19 @@ This entire slide deck is available here:
 
 -   This is not as large as "big data", but it far exceeds the capacity of a single person to apprehend.
 
--   This data can be used to complement, disrupt, irritate, and otherwise make us reconsider our assumptions about Faulkner and modernism more generally.
+-   This data can be used to complement, disrupt, irritate, and otherwise make us reconsider our assumptions about Faulkner and modernism more generally
+
+# A Miniature of Man's Hopes and Disasters {.smaller}
+
+-   There is no 'objective' way to turn literature into data
+-   Years of vetting and peer-review have made the data consistent
+-   Each piece of data creates new insights, but also raises more problems
+-   I still catch data encoding mistakes
+-   ...that I made
+-   Sorry!
+-   Humanities Data Science is an imperfect science
+
+
 
 # Relationships
 
