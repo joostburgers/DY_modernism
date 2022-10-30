@@ -1,6 +1,6 @@
 ---
 title: "Digital Yoknapatawpha and Modernism:"
-subtitle: "Rethinking Computational Scholarship for the next decade"
+subtitle: "Rethinking Computational Scholarship for the Next Decade"
 author: "Johannes Burgers"
 editor: visual
 date: "10/30/2022"
@@ -9,6 +9,17 @@ format:
     theme: simple
     incremental: true
 ---
+# Navigation { .smaller}
+
+This entire slide deck is available here:
+[https://bit.ly/dymodernism](https://bit.ly/dymodernism)
+
+
+<img src="images/bitly_digyok.png" alt="QR code" height="350px"/><a href="https://bit.ly/dymodernism"></a><br>
+
+-   You can use the arrow keys to navigate (←) left and right (→) between sections
+-   Press ESC to see all the slides
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, cache.lazy = FALSE)
@@ -127,16 +138,7 @@ location_export <- location_type %>%
 #write_csv(location_export, "location_export.csv")
 ```
 
-# Navigation { .smaller}
 
-This entire slide deck is available here:
-[https://bit.ly/dymodernism](https://bit.ly/dymodernism)
-
-
-<img src="images/bitly_digyok.png" alt="QR code" height="350px"/><a href="https://bit.ly/dymodernism"></a><br>
-
--   You can use the arrow keys to navigate (←) left and right (→) between sections
--   Press ESC to see all the slides
 
 # Overview
 
@@ -195,7 +197,7 @@ This entire slide deck is available here:
 
 -   These data exist relationally
 
--   ***Characters*** appear at ***events*** (time), which happen at ***locations*** (space)
+-   ***Characters*** appear in ***events*** (time), which happen at ***locations*** (space)
 
 -   This represents a fundamental structure in narrative.
 
